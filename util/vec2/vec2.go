@@ -8,6 +8,6 @@ type Vec2 struct {
 func Add(a Vec2, b Vec2) Vec2 {
 	return Vec2{
 		a.X + b.X,
-		b.Y + b.Y,
+		a.Y + b.Y,
 	}
 }
