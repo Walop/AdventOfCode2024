@@ -1,15 +1,11 @@
 package main
 
 import (
+	"AdventOfCode2024/util/vec2"
 	"bufio"
 	"fmt"
 	"os"
 )
-
-type V2 struct {
-	x int
-	y int
-}
 
 func main() {
 	f, err := os.Open("input.txt")
@@ -36,15 +32,15 @@ func Part1(rows [][]byte) {
 	height := len(rows)
 	width := len(rows[0])
 
-	dirs := []V2{
-		{-1, -1},
-		{0, -1},
-		{1, -1},
-		{-1, 0},
-		{1, 0},
-		{-1, 1},
-		{0, 1},
-		{1, 1},
+	dirs := []vec2.Vec2{
+		{X: -1, Y: -1},
+		{X: 0, Y: -1},
+		{X: 1, Y: -1},
+		{X: -1, Y: 0},
+		{X: 1, Y: 0},
+		{X: -1, Y: 1},
+		{X: 0, Y: 1},
+		{X: 1, Y: 1},
 	}
 
 	count := 0
@@ -62,14 +58,14 @@ func Part1(rows [][]byte) {
 	fmt.Println("Part 1: ", count)
 }
 
-func Check(rows [][]byte, startx int, starty int, dir V2) bool {
+func Check(rows [][]byte, startx int, starty int, dir vec2.Vec2) bool {
 	height := len(rows)
 	width := len(rows[0])
 
 	xmas := []byte("XMAS")
 
-	xend := startx + dir.x*len(xmas)
-	yend := starty + dir.y*len(xmas)
+	xend := startx + dir.X*len(xmas)
+	yend := starty + dir.Y*len(xmas)
 
 	if xend < -1 || xend > width || yend < -1 || yend > height {
 		return false
@@ -82,8 +78,8 @@ func Check(rows [][]byte, startx int, starty int, dir V2) bool {
 		if rows[y][x] != xmas[i] {
 			return false
 		}
-		x += dir.x
-		y += dir.y
+		x += dir.X
+		y += dir.Y
 	}
 
 	return true
@@ -119,18 +115,18 @@ func CheckMas(rows [][]byte, startx int, starty int) bool {
 		return false
 	}
 
-	dirs := []V2{
-		{-1, -1},
-		{-1, 1},
-		{1, -1},
-		{1, 1},
+	dirs := []vec2.Vec2{
+		{X: -1, Y: -1},
+		{X: -1, Y: 1},
+		{X: 1, Y: -1},
+		{X: 1, Y: 1},
 	}
 
 	ms := [4]byte{}
 
 	for i, d := range dirs {
-		x := startx + d.x
-		y := starty + d.y
+		x := startx + d.X
+		y := starty + d.Y
 		if rows[y][x] != mas[0] && rows[y][x] != mas[2] {
 			return false
 		}
