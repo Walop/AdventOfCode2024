@@ -23,6 +23,11 @@ type VD struct {
 	d int
 }
 
+type LoopResult struct {
+	p vec2.Vec2
+	r bool
+}
+
 func main() {
 	f, err := os.Open("input.txt")
 	if err != nil {
@@ -100,6 +105,10 @@ func Part2(layout *Layout) {
 
 	guard := layout.guard
 
+	c := make(chan LoopResult)
+
+	loop_results := 0
+
 	for {
 		next := vec2.Add(guard, DIRS[current_dir])
 
@@ -112,16 +121,23 @@ func Part2(layout *Layout) {
 			break
 		}
 
-		if CheckLoop(layout, layout.guard, next, 0) {
-			loop_obstacles[next] = true
-		}
+		go CheckLoop(layout, layout.guard, next, 0, c)
+		loop_results++
+
 		guard = next
+	}
+
+	for range loop_results {
+		res := <-c
+		if res.r {
+			loop_obstacles[res.p] = true
+		}
 	}
 
 	fmt.Println("Part 2: ", len(loop_obstacles))
 }
 
-func CheckLoop(layout *Layout, current vec2.Vec2, loop_obstacle vec2.Vec2, dir int) bool {
+func CheckLoop(layout *Layout, current vec2.Vec2, loop_obstacle vec2.Vec2, dir int, c chan LoopResult) {
 	visited := make(map[VD]bool)
 
 	for {
@@ -137,7 +153,8 @@ func CheckLoop(layout *Layout, current vec2.Vec2, loop_obstacle vec2.Vec2, dir i
 		}
 
 		if visited[VD{current, dir}] {
-			return true
+			c <- LoopResult{loop_obstacle, true}
+			return
 		}
 
 		visited[VD{current, dir}] = true
@@ -145,7 +162,7 @@ func CheckLoop(layout *Layout, current vec2.Vec2, loop_obstacle vec2.Vec2, dir i
 		current = next
 	}
 
-	return false
+	c <- LoopResult{loop_obstacle, false}
 }
 
 func CheckOutOfBounds(layout *Layout, p vec2.Vec2) bool {
