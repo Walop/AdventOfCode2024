@@ -41,6 +41,7 @@ func main() {
 	// fmt.Println(equations)
 
 	Part1(equations)
+	Part2(equations)
 }
 
 func Part1(equations [][]uint64) {
@@ -69,6 +70,10 @@ func DoCount(nums []uint64, ch chan uint64) {
 }
 
 func Count(result uint64, tres uint64, nums []uint64) bool {
+	if tres > result {
+		return false
+	}
+
 	if len(nums) == 0 {
 		return tres == result
 	}
@@ -77,6 +82,58 @@ func Count(result uint64, tres uint64, nums []uint64) bool {
 		return true
 	}
 	return Count(result, tres+num, nums)
+}
+
+func Part2(equations [][]uint64) {
+	ch := make(chan uint64)
+
+	for _, nums := range equations {
+		go DoCount2(nums, ch)
+	}
+
+	valid_sum := uint64(0)
+
+	for range equations {
+		valid_sum += <-ch
+	}
+
+	fmt.Println("Part 2: ", valid_sum)
+}
+
+func DoCount2(nums []uint64, ch chan uint64) {
+	nums, result := Pop(nums)
+	nums, first := Pop(nums)
+	if !Count2(result, first, nums) {
+		result = 0
+	}
+	ch <- result
+}
+
+func Count2(result uint64, tres uint64, nums []uint64) bool {
+	if tres > result {
+		return false
+	}
+
+	if len(nums) == 0 {
+		return tres == result
+	}
+	nums, num := Pop(nums)
+
+	if Count2(result, tres*num, nums) {
+		return true
+	}
+	if Count2(result, tres+num, nums) {
+		return true
+	}
+
+	multiplier := 1
+	dnum := num
+	for dnum > 0 {
+		multiplier *= 10
+		dnum /= 10
+	}
+
+	return Count2(result, tres*uint64(multiplier)+num, nums)
 }
 
 func Pop(stack []uint64) ([]uint64, uint64) {
