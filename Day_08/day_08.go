@@ -56,12 +56,12 @@ func Part1(layout *Layout) {
 			head := v[0]
 			v = v[1:]
 			for _, pos := range v {
-				dist := pos.Substract(head)
-				antinode := head.Substract(dist)
+				dist := pos.Substract(&head)
+				antinode := head.Substract(&dist)
 				if CheckInBound(layout, antinode) {
 					antinodes[antinode] = true
 				}
-				antinode = pos.Add(dist)
+				antinode = pos.Add(&dist)
 				if CheckInBound(layout, antinode) {
 					antinodes[antinode] = true
 				}
@@ -82,16 +82,16 @@ func Part2(layout *Layout) {
 			v = v[1:]
 			antinodes[head] = true
 			for _, pos := range v {
-				dist := pos.Substract(head)
-				antinode := head.Substract(dist)
+				dist := pos.Substract(&head)
+				antinode := head.Substract(&dist)
 				for CheckInBound(layout, antinode) {
 					antinodes[antinode] = true
-					antinode = antinode.Substract(dist)
+					antinode = antinode.Substract(&dist)
 				}
-				antinode = head.Add(dist)
+				antinode = head.Add(&dist)
 				for CheckInBound(layout, antinode) {
 					antinodes[antinode] = true
-					antinode = antinode.Add(dist)
+					antinode = antinode.Add(&dist)
 				}
 			}
 		}
