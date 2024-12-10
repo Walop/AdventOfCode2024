@@ -1,6 +1,7 @@
 package main
 
 import (
+	"AdventOfCode2024/util/timer"
 	"AdventOfCode2024/util/vec2"
 	"bufio"
 	"fmt"
@@ -29,6 +30,8 @@ var (
 )
 
 func main() {
+	defer timer.Timer("Main")()
+
 	f, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
