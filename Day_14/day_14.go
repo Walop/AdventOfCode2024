@@ -19,6 +19,11 @@ var (
 	height = 103
 )
 
+type result struct {
+	variance float64
+	time     int
+}
+
 func main() {
 	defer timer.Timer("Main")()
 
@@ -92,14 +97,20 @@ func main() {
 
 	fmt.Println("Part 1: ", quadrants[0]*quadrants[1]*quadrants[2]*quadrants[3])
 
+	ch := make(chan result)
+
+	for i := range 10_000 {
+		go calculate_variance(robots, i, ch)
+	}
+
 	min_variance := float64(1_000_000)
 	min_i := 0
 
-	for i := range 10_000 {
-		variance := calculate_variance(robots, i)
-		if variance < min_variance {
-			min_variance = variance
-			min_i = i
+	for range 10_000 {
+		res := <-ch
+		if res.variance < min_variance {
+			min_variance = res.variance
+			min_i = res.time
 		}
 	}
 
@@ -111,10 +122,10 @@ func main() {
 	}
 	fmt.Println("Part 2: ", min_i)
 	img := create_image(tree_positions)
-	write_bpm(min_i, img)
+	write_bmp(min_i, img)
 }
 
-func calculate_variance(robots [][]int, time int) float64 {
+func calculate_variance(robots [][]int, time int, ch chan result) {
 	final_positions := make(map[[2]int]int)
 
 	for _, robot := range robots {
@@ -139,7 +150,7 @@ func calculate_variance(robots [][]int, time int) float64 {
 		variance += math.Abs(average_x-float64(pos[0])) + math.Abs(average_y-float64(pos[1]))
 	}
 
-	return variance
+	ch <- result{variance, time}
 }
 
 func find_final_position(robot []int, time int) [2]int {
@@ -172,7 +183,7 @@ func create_image(positions map[[2]int]bool) *image.Gray {
 	return img
 }
 
-func write_bpm(i int, img *image.Gray) {
+func write_bmp(i int, img *image.Gray) {
 	out, err := os.Create(strconv.Itoa(i) + ".bmp")
 	if err != nil {
 		panic(err)
