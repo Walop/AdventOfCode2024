@@ -94,6 +94,10 @@ func main() {
 
 		to_visit = remove_item(to_visit, i)
 
+		if has_visited(visited, current.point, current.dir) > -1 {
+			continue
+		}
+
 		next := point{current.x + dirs[current.dir].x, current.y + dirs[current.dir].y}
 
 		if next.x == end.x && next.y == end.y {
@@ -107,30 +111,42 @@ func main() {
 		next_path := make([]point, 0, len(current.path)+1)
 		next_path = append(next_path, current.path...)
 		next_path = append(next_path, next)
-		vi := has_visited(visited, current.point, current.dir)
+
+		vi := to_be_visited(to_visit, next, current.dir)
 		if vi != -1 {
-			if visited[vi].points > current.points+1 {
-				visited[vi].points = current.points + 1
-				visited[vi].path = next_path
+			if to_visit[vi].points >= current.points+1 {
+				if to_visit[vi].points == current.points+1 {
+					to_visit[vi].path = append(to_visit[vi].path, next_path...)
+				} else {
+					to_visit[vi].path = next_path
+					to_visit[vi].points = current.points + 1
+				}
 			}
-		} else if maze[next.y][next.x] == '.' {
-			to_visit = append(to_visit, pathpoint{
-				point: point{
-					x: next.x,
-					y: next.y,
-				},
-				dir:    current.dir,
-				points: current.points + 1,
-				path:   next_path,
-			})
+		} else {
+			if maze[next.y][next.x] == '.' {
+				to_visit = append(to_visit, pathpoint{
+					point: point{
+						x: next.x,
+						y: next.y,
+					},
+					dir:    current.dir,
+					points: current.points + 1,
+					path:   next_path,
+				})
+			}
 		}
 
 		new_dir := (current.dir + len(dirs) + 1) % len(dirs)
-		vi = has_visited(visited, current.point, new_dir)
+
+		vi = to_be_visited(to_visit, current.point, new_dir)
 		if vi != -1 {
-			if visited[vi].points > current.points+1000 {
-				visited[vi].points = current.points + 1000
-				visited[vi].path = current.path
+			if to_visit[vi].points >= current.points+1000 {
+				if to_visit[vi].points == current.points+1000 {
+					to_visit[vi].path = append(to_visit[vi].path, current.path...)
+				} else {
+					to_visit[vi].path = current.path
+					to_visit[vi].points = current.points + 1000
+				}
 			}
 		} else {
 			to_visit = append(to_visit, pathpoint{
@@ -145,11 +161,16 @@ func main() {
 		}
 
 		new_dir = (current.dir + len(dirs) - 1) % len(dirs)
-		vi = has_visited(visited, current.point, new_dir)
+
+		vi = to_be_visited(to_visit, current.point, new_dir)
 		if vi != -1 {
-			if visited[vi].points > current.points+1000 {
-				visited[vi].points = current.points + 1000
-				visited[vi].path = current.path
+			if to_visit[vi].points >= current.points+1000 {
+				if to_visit[vi].points == current.points+1000 {
+					to_visit[vi].path = append(to_visit[vi].path, current.path...)
+				} else {
+					to_visit[vi].path = current.path
+					to_visit[vi].points = current.points + 1000
+				}
 			}
 		} else {
 			to_visit = append(to_visit, pathpoint{
@@ -188,7 +209,7 @@ func main() {
 	// 	fmt.Print("\n")
 	// }
 
-	fmt.Println("Seen unique ", len(uq))
+	fmt.Println("Seen unique ", len(uq)+2)
 }
 
 func find_smallest(to_visit []pathpoint) int {
@@ -208,6 +229,15 @@ func remove_item(to_visit []pathpoint, i int) []pathpoint {
 	start := to_visit[:i]
 	end := to_visit[i+1:]
 	return append(start, end...)
+}
+
+func to_be_visited(to_visit []pathpoint, p point, dir int) int {
+	for i, v := range to_visit {
+		if v.x == p.x && v.y == p.y && v.dir == dir {
+			return i
+		}
+	}
+	return -1
 }
 
 func has_visited(visited []pathpoint, p point, dir int) int {
