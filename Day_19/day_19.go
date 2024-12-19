@@ -15,7 +15,7 @@ var (
 func main() {
 	defer timer.Timer("Main")()
 
-	f, err := os.Open("test.txt")
+	f, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -26,12 +26,12 @@ func main() {
 
 	possible := make(map[string]bool)
 	not_possible := make(map[string]bool)
-	possible_max_len := 0
+	// possible_max_len := 0
 
 	scanner.Scan()
 	for _, t := range strings.Split(scanner.Text(), ", ") {
 		possible[t] = true
-		possible_max_len = len(t)
+		// possible_max_len = len(t)
 	}
 
 	for p := range possible {
@@ -66,7 +66,7 @@ func main() {
 
 	for i := range designs {
 		fmt.Println("Trying design ", i)
-		different_ways := build_design(designs[i], possible, &possible_max_len, not_possible, "")
+		different_ways := build_design_stolen(designs[i], possible)
 		if different_ways > 0 {
 			possible_count++
 		}
@@ -75,6 +75,24 @@ func main() {
 
 	fmt.Println(possible_count)
 	fmt.Println(total_ways)
+}
+
+func build_design_stolen(design string, possible map[string]bool) uint64 {
+	if len(design) == 0 {
+		return 1
+	}
+	count, found := design_cache[design]
+	if found {
+		return count
+	}
+
+	for p := range possible {
+		if strings.HasPrefix(design, p) {
+			count += build_design_stolen(design[len(p):], possible)
+		}
+	}
+	design_cache[design] = count
+	return count
 }
 
 func build_design(design string, possible map[string]bool, possible_max_len *int, not_possible map[string]bool, built string) uint64 {
@@ -96,9 +114,7 @@ func build_design(design string, possible map[string]bool, possible_max_len *int
 
 	possible_count := uint64(0)
 
-	add := -1
-
-	for i := loop_len; i > 0 && i < len(design)+1; {
+	for i := loop_len; i > 0; i-- {
 		fragment := string(design[:i])
 		if possible[fragment] {
 			new_built := built + fragment
@@ -107,16 +123,13 @@ func build_design(design string, possible map[string]bool, possible_max_len *int
 				*possible_max_len = len(built)
 			}
 			next := string(design[i:])
-			next_count := build_design(next, possible, possible_max_len, not_possible, new_built)
-			possible_count += next_count
-			if i == 0 {
-				add = 1
-			}
-			if add == 1 && next_count == 0 {
+			count, found := design_cache[next]
+			if found {
+				possible_count = count
 				break
 			}
+			possible_count += build_design(next, possible, possible_max_len, not_possible, new_built)
 		}
-		i += add
 	}
 	if possible_count == 0 {
 		not_possible[design] = true
