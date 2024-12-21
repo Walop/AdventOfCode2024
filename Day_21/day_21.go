@@ -20,13 +20,6 @@ func (v *point) add(other *point) *point {
 	}
 }
 
-func (v *point) multiply(multiplier int) *point {
-	return &point{
-		v.x * multiplier,
-		v.y * multiplier,
-	}
-}
-
 var numpad = map[byte]point{
 	'7': {0, 0},
 	'8': {1, 0},
@@ -49,17 +42,17 @@ var arrowpad = map[byte]point{
 	'>': {2, 1},
 }
 
-var reverse_arrowpad = map[point]byte{
-	{1, 0}: '^',
-	{0, 1}: '<',
-	{1, 1}: 'v',
-	{2, 1}: '>',
+type keyseq_key struct {
+	seq   string
+	depth int
 }
+
+var keyseq_cache = map[keyseq_key]int{}
 
 func main() {
 	defer timer.Timer("Main")()
 
-	f, err := os.Open("test.txt")
+	f, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -93,114 +86,173 @@ func main() {
 	for _, c := range codes {
 		keyseq1 := get_numpad_keys(c)
 
-		fmt.Println(string(keyseq1))
+		//fmt.Println(string(keyseq1))
 
-		keyseq2 := get_arrowpad_keys(keyseq1, 2)
+		count := 0
+		count += count_seq(keyseq1, 1, 2)
+		// fmt.Println()
+		fmt.Println(count)
 
-		fmt.Println(string(keyseq2))
+		//fmt.Println(string(keyseq2))
 
-		keyseq3 := get_arrowpad_keys(keyseq2, 1)
+		// keyseq3 := get_arrowpad_keys(keyseq2, 1)
 
 		numeric, _ := strconv.Atoi(string(c[0:3]))
 
-		fmt.Println(len(keyseq3), numeric, string(keyseq3))
-		fmt.Println()
-		sum += numeric * len(keyseq3)
+		sum += numeric * count
 	}
 
 	fmt.Println("Part 1", sum)
+
+	sum = 0
+	keyseq_cache = map[keyseq_key]int{}
+
+	for _, c := range codes {
+		keyseq1 := get_numpad_keys(c)
+
+		count := 0
+		count += count_seq(keyseq1, 1, 25)
+		fmt.Println(count)
+
+		numeric, _ := strconv.Atoi(string(c[0:3]))
+
+		sum += numeric * count
+	}
+
+	// too high 473560765309814, 349738774242354, 307690647333324
+	// not right 123433191944248
+	// Should be right 307055584161760
+	fmt.Println("Part 2", sum)
 }
 
 func get_numpad_keys(code []byte) []byte {
 	current_pos := numpad['A']
 	keyseq := make([]byte, 0, 20)
 
-	for len(code) > 0 {
-		next := numpad[code[0]]
-		if current_pos == next {
-			keyseq = append(keyseq, 'A')
-			code = code[1:]
-			continue
-		}
+	for i := range code {
+		next := numpad[code[i]]
+
+		h, v := []byte{}, []byte{}
+
 		target_x := next.x - current_pos.x
 		target_y := next.y - current_pos.y
-		switch {
-		case (next.x != 0 || current_pos.y != 3) && target_x < 0:
-			for range -target_x {
-				keyseq = append(keyseq, '<')
-				current_pos = *current_pos.add(&point{-1, 0})
+		for range abs(target_x) {
+			if target_x > 0 {
+				h = append(h, '>')
+			} else {
+				h = append(h, '<')
 			}
-		case (next.y != 3 || current_pos.x != 0) && target_y > 0:
-			for range target_y {
-				keyseq = append(keyseq, 'v')
-				current_pos = *current_pos.add(&point{0, 1})
-			}
-		case target_x > 0:
-			for range target_x {
-				keyseq = append(keyseq, '>')
-				current_pos = *current_pos.add(&point{1, 0})
-			}
-		case target_y < 0:
-			for range -target_y {
-				keyseq = append(keyseq, '^')
-				current_pos = *current_pos.add(&point{0, -1})
-			}
-		case target_x < 0:
-			for range -target_x {
-				keyseq = append(keyseq, '<')
-				current_pos = *current_pos.add(&point{-1, 0})
-			}
-		case target_y > 0:
-			for range target_y {
-				keyseq = append(keyseq, 'v')
-				current_pos = *current_pos.add(&point{0, 1})
-			}
-		default:
-			panic("All cases should be handled")
 		}
+
+		for range abs(target_y) {
+			if target_y > 0 {
+				v = append(v, 'v')
+			} else {
+				v = append(v, '^')
+			}
+		}
+
+		if current_pos.y == 3 && next.x == 0 {
+			keyseq = append(keyseq, v...)
+			keyseq = append(keyseq, h...)
+		} else if current_pos.x == 0 && next.y == 3 {
+			keyseq = append(keyseq, h...)
+			keyseq = append(keyseq, v...)
+		} else if target_x < 0 {
+			keyseq = append(keyseq, h...)
+			keyseq = append(keyseq, v...)
+		} else {
+			keyseq = append(keyseq, v...)
+			keyseq = append(keyseq, h...)
+		}
+
+		current_pos = next
+		keyseq = append(keyseq, 'A')
 	}
 
 	return keyseq
 }
 
-func get_arrowpad_keys(input []byte, depth int) []byte {
+func count_seq(input []byte, depth int, max_depth int) int {
+	c, found := keyseq_cache[keyseq_key{string(input), depth}]
+	if found {
+		return c
+	}
+
+	seq := get_arrowpad_keys(input)
+	if depth == max_depth {
+		return len(seq)
+	}
+
+	sum := 0
+	for _, s := range split_seq(seq) {
+		sum += count_seq(s, depth+1, max_depth)
+	}
+
+	keyseq_cache[keyseq_key{string(input), depth}] = sum
+	return sum
+}
+
+func get_arrowpad_keys(input []byte) []byte {
 	current_pos := arrowpad['A']
 	keyseq := make([]byte, 0, 150)
 
-	for len(input) > 0 {
-		next := arrowpad[input[0]]
-		if current_pos == next {
-			keyseq = append(keyseq, 'A')
-			input = input[1:]
-			continue
-		}
+	for i := range input {
+		next := arrowpad[input[i]]
+
+		h, v := []byte{}, []byte{}
+
 		target_x := next.x - current_pos.x
 		target_y := next.y - current_pos.y
-		switch {
-		case (current_pos.y != 0 || current_pos.x != 1) && (depth%2 == 1 || next.x == 1) && target_x < 0:
-			keyseq = append(keyseq, '<')
-			current_pos = *current_pos.add(&point{-1, 0})
-		case next.y != 0 && target_y < 0:
-			keyseq = append(keyseq, '^')
-			current_pos = *current_pos.add(&point{0, -1})
-		case target_y > 0:
-			keyseq = append(keyseq, 'v')
-			current_pos = *current_pos.add(&point{0, 1})
-		case target_x > 0:
-			keyseq = append(keyseq, '>')
-			current_pos = *current_pos.add(&point{1, 0})
-		case target_x < 0:
-			keyseq = append(keyseq, '<')
-			current_pos = *current_pos.add(&point{-1, 0})
-		case target_y < 0:
-			keyseq = append(keyseq, '^')
-			current_pos = *current_pos.add(&point{0, -1})
-		default:
-			panic("All cases should be handled")
+		for range abs(target_x) {
+			if target_x > 0 {
+				h = append(h, '>')
+			} else {
+				h = append(h, '<')
+			}
 		}
+
+		for range abs(target_y) {
+			if target_y > 0 {
+				v = append(v, 'v')
+			} else {
+				v = append(v, '^')
+			}
+		}
+
+		if current_pos.x == 0 && next.y == 0 {
+			keyseq = append(keyseq, h...)
+			keyseq = append(keyseq, v...)
+		} else if current_pos.y == 0 && next.x == 0 {
+			keyseq = append(keyseq, v...)
+			keyseq = append(keyseq, h...)
+		} else if target_x < 0 {
+			keyseq = append(keyseq, h...)
+			keyseq = append(keyseq, v...)
+		} else {
+			keyseq = append(keyseq, v...)
+			keyseq = append(keyseq, h...)
+		}
+
+		current_pos = next
+		keyseq = append(keyseq, 'A')
 	}
 
 	return keyseq
+}
+
+func split_seq(input []byte) [][]byte {
+	var result [][]byte
+	var current []byte
+
+	for _, char := range input {
+		current = append(current, char)
+		if char == 'A' {
+			result = append(result, current)
+			current = []byte{}
+		}
+	}
+	return result
 }
 
 func abs(x int) int {
