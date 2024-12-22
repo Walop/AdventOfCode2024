@@ -80,9 +80,9 @@ func do_rounds(seed int64, rounds int) int64 {
 func part2(seeds []int64) {
 	cpus := runtime.NumCPU()
 
-	channels := make([]chan map[string]int64, cpus)
+	channels := make([]chan map[int64]int64, cpus)
 	for x := range channels {
-		channels[x] = make(chan map[string]int64)
+		channels[x] = make(chan map[int64]int64)
 	}
 
 	i := 0
@@ -91,43 +91,37 @@ func part2(seeds []int64) {
 		i++
 	}
 
-	bananas := make(map[string]int64)
+	bananas := make(map[int64]int64)
 
+	max := int64(0)
 	for j := range i {
 		for b := range channels[j] {
 			for k, v := range b {
-				bananas[k] += v
+				new_val := bananas[k] + v
+				bananas[k] = new_val
+				if new_val > max {
+					max = new_val
+				}
 			}
-		}
-	}
-
-	max := int64(0)
-
-	for _, v := range bananas {
-		if v > max {
-			max = v
-			// fmt.Println(k, v)
 		}
 	}
 
 	fmt.Println("Part 2: ", max)
 }
 
-func do_batch2(seeds []int64, rounds int, ch chan map[string]int64) {
-	bananas := make(map[string]int64)
+func do_batch2(seeds []int64, rounds int, ch chan map[int64]int64) {
+	bananas := make(map[int64]int64)
 	for i := range seeds {
-		b := do_rounds2(seeds[i], rounds)
-		for k, v := range b {
-			bananas[k] += v
-		}
+		do_rounds2(seeds[i], rounds, bananas)
 	}
 	ch <- bananas
 	close(ch)
 }
 
-func do_rounds2(seed int64, rounds int) map[string]int64 {
+func do_rounds2(seed int64, rounds int, bananas map[int64]int64) {
 	current := seed
-	bananas := make(map[string]int64)
+
+	seen := map[int64]struct{}{}
 
 	prev_list := make([]int64, 0, rounds)
 	prev := seed % 10
@@ -141,14 +135,14 @@ func do_rounds2(seed int64, rounds int) map[string]int64 {
 			prev_list = prev_list[1:]
 		}
 		if len(prev_list) == 4 {
-			key := strconv.FormatInt(prev_list[0], 10) + "," + strconv.FormatInt(prev_list[1], 10) + "," + strconv.FormatInt(prev_list[2], 10) + "," + strconv.FormatInt(prev_list[3], 10)
-			_, found := bananas[key]
+			key := prev_list[0]<<20 + prev_list[1]<<15 + prev_list[2]<<10 + prev_list[3]<<5
+			_, found := seen[key]
 			if !found {
-				bananas[key] = last_number
+				bananas[key] += last_number
+				seen[key] = struct{}{}
 			}
 		}
 	}
-	return bananas
 }
 
 func next_number(seed int64) int64 {
@@ -158,7 +152,6 @@ func next_number(seed int64) int64 {
 
 	next2 := next1 >> 5
 	next2 ^= next1
-	next2 &= 16_777_215
 
 	next3 := next2 << 11
 	next3 ^= next2
