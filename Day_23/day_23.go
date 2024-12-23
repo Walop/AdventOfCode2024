@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+type triplet struct {
+	first  string
+	second string
+	third  string
+}
+
 func main() {
 	defer timer.Timer("Main")()
 
@@ -44,7 +50,7 @@ func main() {
 }
 
 func part1(connections map[string][]string) {
-	triplets := make(map[string]struct{}, 50)
+	triplets := make(map[triplet]struct{}, 50)
 
 	for k := range connections {
 		if k[0] == 't' {
@@ -57,15 +63,15 @@ func part1(connections map[string][]string) {
 	fmt.Println("Part 1: ", len(triplets))
 }
 
-func find_triplets(connections map[string][]string, start string) []string {
-	triplets := make([]string, 0, 50)
+func find_triplets(connections map[string][]string, start string) []triplet {
+	triplets := make([]triplet, 0, 50)
 
 	for _, n := range connections[start] {
 		for _, n2 := range connections[n] {
 			if slices.Contains(connections[n2], start) {
 				path := []string{start, n, n2}
 				slices.Sort(path)
-				triplets = append(triplets, strings.Join(path, ""))
+				triplets = append(triplets, triplet{path[0], path[1], path[2]})
 			}
 		}
 	}
@@ -73,7 +79,7 @@ func find_triplets(connections map[string][]string, start string) []string {
 }
 
 func part2(connections map[string][]string) {
-	triplets := make(map[string]struct{}, len(connections))
+	triplets := make(map[triplet]struct{}, len(connections))
 	for node := range connections {
 		for _, v := range find_triplets(connections, node) {
 			triplets[v] = struct{}{}
@@ -82,23 +88,23 @@ func part2(connections map[string][]string) {
 
 	most_common := ""
 	most_common_count := 0
-	start_nodes := make(map[string][]string, len(connections))
+	start_nodes := make(map[string][]triplet, len(connections))
 	for triplet := range triplets {
-		start := string(triplet[:2])
-		tr := append(start_nodes[start], triplet)
-		start_nodes[start] = tr
+		tr := append(start_nodes[triplet.first], triplet)
+		start_nodes[triplet.first] = tr
 		if len(tr) > most_common_count {
 			most_common_count = len(tr)
-			most_common = start
+			most_common = triplet.first
 		}
 	}
 
 	passwdparts := map[string]struct{}{}
 
+	passwdparts[most_common] = struct{}{}
+
 	for _, tr := range start_nodes[most_common] {
-		for n := range slices.Chunk([]byte(tr), 2) {
-			passwdparts[string(n)] = struct{}{}
-		}
+		passwdparts[tr.second] = struct{}{}
+		passwdparts[tr.third] = struct{}{}
 	}
 
 	password := get_keys(passwdparts)
