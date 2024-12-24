@@ -62,53 +62,10 @@ func main() {
 	}
 
 	slices.SortFunc(ports, compare_ports)
-	// ports = sort_and_rename(ports)
-
-	// fmt.Println(wires)
-	// fmt.Println(ports)
-	// for _, v := range ports {
-	// 	fmt.Println(v.input1, v.operation, v.input2, v.output)
-	// }
 
 	part1(copy_map(wires), append([]port{}, ports...))
 	part2(copy_map(wires), append([]port{}, ports...))
-}
-
-func sort_and_rename(ports []port) []port {
-	slices.SortFunc(ports, compare_ports)
-
-	rename := make(map[string]string, len(ports))
-
-	for i := range ports {
-		if ports[i].input1[0] > 'w' && ports[i].output[1] > '9' {
-			rename[ports[i].output] = ports[i].input1 + ports[i].input2
-			ports[i].output = ports[i].input1 + ports[i].input2
-		}
-	}
-
-	renamed := true
-	for renamed {
-		renamed = false
-		for i := range ports {
-			output := ports[i].output
-			rename1, exists1 := rename[ports[i].input1]
-			rename2, exists2 := rename[ports[i].input2]
-			if exists1 && exists2 {
-				ports[i].input1 = rename1
-				ports[i].input2 = rename2
-				renamed = true
-				if output[1] > '9' {
-					out_name := rename1 + rename2
-					rename[ports[i].output] = out_name
-					ports[i].output = out_name
-				}
-			}
-		}
-	}
-
-	slices.SortFunc(ports, compare_ports)
-
-	return ports
+	//produce_dot(ports)
 }
 
 func compare_ports(a port, b port) int {
@@ -189,6 +146,15 @@ func evaluate_gate(operation string, input1 bool, input2 bool) bool {
 }
 
 func part2(wires map[string]bool, ports []port) {
+	for i := range 45 {
+		num := strconv.Itoa(i)
+		for len(num) < 2 {
+			num = "0" + num
+		}
+		wires["x"+num] = true
+		wires["y"+num] = true
+	}
+
 	nxz := make([]int, 0, 3)
 	xnz := make([]int, 0, 3)
 	swapped := make([]string, 0, 8)
@@ -209,6 +175,7 @@ func part2(wires map[string]bool, ports []port) {
 		for _, j := range nxz {
 			if ports[j].output == a {
 				b = j
+				break
 			}
 		}
 		temp := ports[i].output
@@ -236,10 +203,19 @@ func part2(wires map[string]bool, ports []port) {
 	fmt.Println()
 
 	diff := z - x - y
-	log_diff := int(math.Log2(float64(z - x - y)))
+	if diff < 0 {
+		diff = -diff
+	}
+	log_diff := 0
+	if diff > 0 {
+		log_diff = int(math.Log2(float64(diff)))
+	}
 	fmt.Printf("%d + %d = %d, diff %d log2 %d\n", x, y, z, diff, log_diff)
 
 	false_carry := strconv.Itoa(log_diff)
+	for len(false_carry) < 2 {
+		false_carry = "0" + false_carry
+	}
 	carry_swap := make([]int, 0, 2)
 	for i, p := range ports {
 		if strings.HasSuffix(p.input1, false_carry) || strings.HasSuffix(p.input2, false_carry) {
@@ -266,7 +242,7 @@ func part2(wires map[string]bool, ports []port) {
 	diff = z - x - y
 	log_diff = 0
 	if diff > 0 {
-		log_diff = int(math.Log2(float64(z - x - y)))
+		log_diff = int(math.Log2(float64(diff)))
 	}
 	fmt.Printf("%d + %d = %d, diff %d log2 %d\n", x, y, z, diff, log_diff)
 
@@ -286,8 +262,8 @@ func first_z_using_output(ports []port, output string) string {
 	if next_output[0] == 'z' {
 		num, _ := strconv.Atoi(string(next_output[1:]))
 		str := strconv.Itoa(num - 1)
-		for range len(str) - 2 {
-			str += "0"
+		for len(str) < 2 {
+			str = "0" + str
 		}
 		return "z" + str
 	}
@@ -313,4 +289,36 @@ func build_number(start byte, wires map[string]bool) int64 {
 		}
 	}
 	return result
+}
+
+func produce_dot(ports []port) {
+	fmt.Println("digraph {")
+
+	for i := range 46 {
+		if i < 45 {
+			fmt.Printf("x%02d [fillcolor=\"blue\" style=\"filled\"];\n", i)
+			fmt.Printf("y%02d [fillcolor=\"green\" style=\"filled\"];\n", i)
+		}
+		fmt.Printf("z%02d [fillcolor=\"red\" style=\"filled\"];\n", i)
+	}
+
+	for i, p := range ports {
+		attr := ""
+		switch p.operation {
+		case "XOR":
+			attr += "[fillcolor=\"yellow\" style=\"filled\"]"
+		case "AND":
+			attr += "[fillcolor=\"orange\" style=\"filled\"]"
+		case "OR":
+			attr += "[fillcolor=\"pink\" style=\"filled\"]"
+		}
+
+		fmt.Printf("%s %s;\n", p.operation+strconv.Itoa(i), attr)
+
+		fmt.Printf("%s -> %s;\n", p.input1, p.operation+strconv.Itoa(i))
+		fmt.Printf("%s -> %s;\n", p.input2, p.operation+strconv.Itoa(i))
+		fmt.Printf("%s -> %s;\n", p.operation+strconv.Itoa(i), p.output)
+	}
+
+	fmt.Println("}")
 }
