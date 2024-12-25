@@ -33,19 +33,35 @@ func main() {
 
 	slices.Reverse(program)
 
-	a_long := uint64(0)
-
-	for _, val := range program {
-		a_long <<= 3
-		for x := range 8 {
-			if run(a_long+uint64(x)) == val {
-				a_long += uint64(x)
-				break
-			}
-		}
-	}
+	a_long := find_quine_input(0, program)
 
 	fmt.Println("Part 2: ", a_long)
+}
+
+func find_quine_input(a uint64, program []uint64) uint64 {
+	if len(program) == 0 {
+		return a
+	}
+	val := program[0]
+	next_program := program[1:]
+	a <<= 3
+	for x := range 8 {
+		next_a := uint64(0)
+		if run(a+uint64(x)) == val {
+			fmt.Println("Found", val, next_program, "possible next octal", x)
+			fmt.Printf("%b\n", a+uint64(x))
+			fmt.Println()
+			next_a = find_quine_input(a+uint64(x), next_program)
+			if next_a != 0xFFFFFFFFFFFFFFFF {
+				return next_a
+			}
+		}
+		if x == 7 && next_a == 0xFFFFFFFFFFFFFFFF {
+			fmt.Println(val, program)
+			panic("Not found")
+		}
+	}
+	return 0xFFFFFFFFFFFFFFFF
 }
 
 func run(a uint64) uint64 {
